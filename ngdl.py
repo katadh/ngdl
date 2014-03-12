@@ -45,6 +45,27 @@ def game_pieces_dialog(game):
 
     for player in game.players:
         in_piece_names = raw_input("What pieces does " + player.name " have?: ")
-        pieces = re.findall("([0-9]*)\s|^([^\W\d_]+)", in_piece_list)
-        for piece in pieces:
+        pieces = re.findall("([0-9]*)\s|^([^\W\d]+)", in_piece_list)
 
+        for p in pieces:
+            game.pieces[p[1]] = Piece(p[1])
+                
+            if p[0] == "" or int(p[0]) > 1:
+                p_positions = raw_input("What are the starting positions <col, row> of the " +
+                                        p[1] + " that start on the board? (enter to skip): ")
+            else:
+                p_positions = raw_input("What is the starting position <col, row> of the " +
+                                        p[1] + " if it starts on the board? (enter to skip): ")
+
+            positions = re.findall("([0-9]+),\s?([0-9]+)", p_positions)
+            if positions:
+                for pos in positions:
+                    game.board.starting_positions[(int(pos[0]), int(pos[1]))] = player.name + " " + piece.name
+
+#def player_move_dialog(game):
+
+#def piece_move_dialog(game):
+
+#def goal_dialog(game):
+
+#def terminal_dialog(game):

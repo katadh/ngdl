@@ -34,7 +34,7 @@ class Player:
 
     def __init__(self, n):
         self.name = n
-        self.pieces = {}
+        self.pieces = []
 
     def __eq__(self, other):
         return self.name == other.name
