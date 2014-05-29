@@ -44,7 +44,7 @@ def player_num_dialog(game):
 def game_pieces_dialog(game):
 
     for player in game.players:
-        in_piece_names = raw_input("What pieces does " + player.name " have?: ")
+        in_piece_names = raw_input("What pieces does " + player.name + " have?: ")
         pieces = re.findall("([0-9]*)\s|^([^\W\d]+)", in_piece_list)
 
         for p in pieces:
@@ -66,6 +66,6 @@ def game_pieces_dialog(game):
 
 #def piece_move_dialog(game):
 
-#def goal_dialog(game):
+def goal_dialog(game):
 
 #def terminal_dialog(game):
