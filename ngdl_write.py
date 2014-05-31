@@ -433,7 +433,7 @@ def write_var_succ(gdl_file, ceiling, x=1, y=0):
 
 # X and O in Tic-Tac-Toe
 def marker_move(gdl_file):
-    
+    return
 
 ###########################################################
 # This section is for dealing with the various conditions #

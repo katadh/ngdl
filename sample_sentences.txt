@@ -1,72 +1,75 @@
 GAME END-CONDITIONS
 *******************
 The game ends if the board is full.
-ENTITY STATE IF ENTITY STATE
 
 The game ends if neither player can move.
-ENTITY STATE IF NUM ENTITY STATE
 
 The game ends when a player wins.
 
+The game ends after 10 turns.
 
-The game ends after NUM turns.
-
-
-The game ends if a player gets NUM pieces in-a-row.
-ENTITY STATE IF ENTITY NUM ENITIY STATE
-
+The game ends if a player gets 3 pieces in-a-row.
 
 WIN CONDITIONS
 **************
+2 parses
 Player 1 wins if player 2 has no pieces on the board.
-ENTITY STATE IF ENTITY ENTITY RELATION ENTITY
 
-A player wins if they get NUM pieces in-a-row.
-ENTITY STATE IF ENTITY NUM ENTITY STATE
+A player wins if they get 3 pieces in-a-row.
 
-A player wins if the opponent has NUM pieces in-a-row and they do not.
-ENTITY STATE IF ENTITY NUM ENTITY STATE AND ENTITY NOT.
+A player wins if the opponent has 3 pieces in-a-row.
 
 A player wins if the opponent can not move.
-ENTITY STATE IF ENTITY NOT STATE
 
+0 parses
 Whoever has the most pieces at the end of the game wins.
 
+0 parses
 A player wins if they have more pieces than their opponent when the game ends.
 
-
 A player wins if the pieces are in-order.
-ENTITY STATE IF ENTITY STATE
 
-The player who has captured the most pieces at the end of the game, wins.
-
+0 parses
+The player who has captured the most pieces at the end of the game wins.
 
 A player wins if they have a piece in the last row.
 
+The first player to get 3 pieces in-a-row in the center 3 x 3 square wins.
 
-The [first player] to get [3 pieces in-a-row] in the [center 3x3 square], wins.
+A player wins if they move a pawn to the opposite side of the board or capture all the opponents pawns.
 
-
-A [player wins] if they [move a pawn] to the [opposite side of the board] or [capture all the opponents pawns].
-ENTITY STATE IF 
+A player wins if an opponents pawn moves to the last row.
 
 LOSE CONDITIONS
 ***************
 If a player can not move, they lose.
-IF ENTITY RELATION NOT STATE THEN ENTITY STATE
 
-A player loses if they get NUM pieces in-a-row.
-ENTITY STATE IF ENTITY RELATION NUM ENTITY STATE
+A player loses if they get 3 pieces in-a-row.
 
 PLAYER MOVE
 ***********
-On their turn, a player can mark any open square.
-A player can drop a piece in any open column on their turn.
-On their turn, a player can move any one piece.
+A player can mark any open square.
+
+A player can drop a piece in any open column.
+
+A player can move any one piece.
+
+A player may place the last piece that was captured.
+
+A player may place the last captured piece.
+
+A player can move one piece four times.
+
+A player can place one piece on their side of the board.
+
+A player can move four different pieces.
+
 A player can make four moves, moving any one piece each time.
 
 PIECE MOVES
 ***********
 A bishop can move in open diagonals.
+
 A rook can move along open rows or columns.
+
 Pawns can move forward one square.

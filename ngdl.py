@@ -67,5 +67,6 @@ def game_pieces_dialog(game):
 #def piece_move_dialog(game):
 
 def goal_dialog(game):
+    win_conditions = raw_input("How does a player win?: ")
 
 #def terminal_dialog(game):
