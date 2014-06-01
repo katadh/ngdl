@@ -9,55 +9,68 @@ def get_grammar(choice):
     if choice == 1:
         grammar = nltk.parse_cfg("""
         S -> IF COND THEN RESULT | RESULT IF COND | PLAYER ACTION RESULT
-        RESULT -> STATE | ACTION
-        COND -> COND AND COND | COND OR COND | CONDLIST AND COND | CONDLIST OR COND | STATE | NOT STATE
-        CONDLIST -> COND ',' CONDLIST | COND 
-        STATE -> ENTITY STATE | ENTITY ACTION | STATE POSITION_RELATION BOARD_PART | ENTITY
-        ENTITY -> PLAYER | PIECE | MOD PIECE | NUM PIECE | BOARD_PART | NUM BOARD_PART | TEMPORAL | NUM TEMPORAL | ENTITY PART_RELATION ENTITY 
+        RESULT -> STATE | ACTION | ENTITY ACTION
+        COND -> COND AND COND | COND OR COND | CONDLIST AND COND | CONDLIST OR COND | STATE | NOT STATE | ENTITY ACTION
+        CONDLIST -> COND ',' CONDLIST | COND ',' COND
+        STATE -> ENTITY STATE | STATE POSITION_RELATION ENTITY | STATE TEMPORAL_RELATION STATE | NUM_COMP | ENTITY
+        ACTION -> NOT ACTION | POSSESS STATE | 'to' ACTION | 'have' ACTION | ACTION ENTITY | ACTION POSITION_RELATION ENTITY | ACTION TEMPORAL_RELATION STATE
+        ENTITY -> PLAYER | NUM PLAYER | PIECE | NUM PIECE | BOARD_PART | NUM BOARD_PART | TEMPORAL | NUM TEMPORAL | ENTITY PART_RELATION ENTITY | POSSESSION | NUM POSSESSION | ENTITY OR ENTITY | ENTITY AND ENTITY | ENTITYLIST OR ENTITY | ENTITYLIST AND ENTITY
+        ENTITYLIST -> ENTITY ',' ENTITYLIST | ENTITY ',' ENTITY
+        PIECE -> MOD PIECE
         BOARD_PART -> MOD BOARD_PART
-        ACTION -> NOT ACTION | POSSESS STATE | 'to' ACTION
+        POSSESSION -> PLAYER ENTITY
+        NUM_COMP -> 'between' NUM AND NUM ENTITY | NUM_COMP 'than' NUM ENTITY | NUM_COMP ENTITY 'than' ENTITY
         IF -> 'if' | 'when' | 'after' | 'by'
         THEN -> 'then' | ','
-        NOT -> 'not' | 'neither'
+        NOT -> 'not'
         AND -> 'and'
         OR -> 'or'
         STATE -> 'in-a-row' | 'in-order' | 'full' | 'occupied' | EMPTY
-        ACTION -> 'win' | 'lose' | 'end' | 'move' | 'capture' | 'place' | 'mark' 
+        ACTION -> 'win' | 'lose' | 'end' | 'move' | 'capture' | 'place' | 'mark' | 'reach' | 'drop'
         POSSESS -> 'get' | 'have'
         BOARD_PART -> 'board' | 'cell' | 'square' | 'row' | 'column' | 'side' | 'diagonal'
-        TEMPORAL -> 'turn' | 'game' | 'match' | 'time'
+        TEMPORAL -> 'turn' | 'game' | 'match' | 'time' | 'end' | 'beginning'
         PLAYER -> 'player' | 'player' NUM | MOD 'player' | 'they' | 'their' | 'opponent' | 'whoever'
         PIECE -> 'pawn' | 'rook' | 'knight' | 'bishop' | 'queen' | 'king' | 'x' | 'o' | 'disc' | 'piece' | 'it'
-        MOD -> 'most' | 'least' | 'first' | 'last' | 'middle' | 'center' | NUM 'x' NUM | NUM 'by' NUM | 'opposite' | 'full' | 'occupied' | EMPTY
-        NUM_COMP -> 'more' | 'less' | 'greater' | 'fewer' | 'between' NUM AND NUM
-        POSITION_RELATION -> 'on' | 'in' | 'to'
+        MOD -> 'most' | 'least' | 'first' | 'last' | 'middle' | 'center' | 'top' | 'bottom' | 'left' | 'right' | NUM 'x' NUM | NUM 'by' NUM | 'opposite' | 'full' | 'occupied' | 'different' | EMPTY
+        NUM_COMP -> 'more' | 'less' | 'greater' | 'fewer'
+        POSITION_RELATION -> 'on' | 'in' | 'to' | 'into' | 'onto'
         PART_RELATION -> 'of'
-        NUM -> '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'no' | 'all'
+        TEMPORAL_RELATION -> 'at' | 'when'
+        NUM -> '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'one' | 'two' | 'three' | 'four' | 'five' | 'six' | 'seven' | 'eight' | 'nine' | 'ten' | 'no' | 'neither' | 'all' | 'every' | 'both'
         EMPTY -> 'empty' | 'blank' | 'open'
         """)
     if choice == 2:
         grammar = nltk.parse_cfg("""
         S -> PLAYER ACTION | PLAYER ACTION IF COND | IF COND THEN PLAYER ACTION
-        ACTION -> ACTION ENTITY | ACTION ENTITY RELATION ENTITY
-        COND -> COND AND COND | COND OR COND | STATE
-        STATE -> ENTITY STATE | NOT STATE | STATE RELATION ENTITY | ENTITY
-        ENTITY -> PLAYER | PIECE | NUM PIECE | BOARD_PART | NUM BOARD_PART | TEMPORAL
+        COND -> COND AND COND | COND OR COND | CONDLIST AND COND | CONDLIST OR COND | STATE | NOT STATE | ENTITY ACTION
+        CONDLIST -> COND ',' CONDLIST | COND ',' COND
+        STATE -> ENTITY STATE | STATE POSITION_RELATION ENTITY | STATE TEMPORAL_RELATION STATE | NUM_COMP | ENTITY
+        ACTION -> NOT ACTION | POSSESS STATE | 'to' ACTION | 'have' ACTION | ACTION ENTITY | ACTION POSITION_RELATION ENTITY | ACTION TEMPORAL_RELATION STATE
+        ENTITY -> PLAYER | NUM PLAYER | PIECE | NUM PIECE | BOARD_PART | NUM BOARD_PART | TEMPORAL | NUM TEMPORAL | ENTITY PART_RELATION ENTITY | POSSESSION | NUM POSSESSION | ENTITY OR ENTITY | ENTITY AND ENTITY | ENTITYLIST OR ENTITY | ENTITYLIST AND ENTITY
+        ENTITYLIST -> ENTITY ',' ENTITYLIST | ENTITY ',' ENTITY
         PIECE -> MOD PIECE
         BOARD_PART -> MOD BOARD_PART
-        IF -> 'if' | 'when' | 'after'
+        POSSESSION -> PLAYER ENTITY
+        NUM_COMP -> 'between' NUM AND NUM ENTITY | NUM_COMP 'than' NUM ENTITY | NUM_COMP ENTITY 'than' ENTITY
+        IF -> 'if' | 'when' | 'after' | 'by'
         THEN -> 'then' | ','
         NOT -> 'not'
-        AND -> 'and' | ','
-        OR -> 'or' | ','
+        AND -> 'and'
+        OR -> 'or'
         STATE -> 'in-a-row' | 'in-order' | 'full' | 'occupied' | EMPTY
-        ACTION -> 'mark' | 'place' | 'drop' | 'move' | 'capture'
+        ACTION -> 'win' | 'lose' | 'end' | 'move' | 'capture' | 'place' | 'mark' | 'reach' | 'drop' | 'make'
+        POSSESS -> 'get' | 'have'
         BOARD_PART -> 'board' | 'cell' | 'square' | 'row' | 'column' | 'side' | 'diagonal'
-        TEMPORAL -> 'turn' | 'game' | 'time'
+        TEMPORAL -> 'turn' | 'game' | 'match' | 'move' | 'time' | 'end' | 'beginning'
         PLAYER -> 'player' | 'player' NUM | MOD 'player' | 'they' | 'their' | 'opponent' | 'whoever'
         PIECE -> 'pawn' | 'rook' | 'knight' | 'bishop' | 'queen' | 'king' | 'x' | 'o' | 'disc' | 'piece' | 'it'
-        MOD -> 'most' | 'least' | 'first' | 'last' | 'middle' | 'center' | NUM 'x' NUM | NUM 'by' NUM | 'opposite' | 'full' | 'occupied' | 'different' | EMPTY
-        RELATION -> 'more' | 'less' | 'greater' | 'on' | 'in' | 'of'
-        NUM -> '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'neither' | 'no' | 'all'
+        MOD -> 'most' | 'least' | 'first' | 'last' | 'middle' | 'center' | 'top' | 'bottom' | 'left' | 'right' | NUM 'x' NUM | NUM 'by' NUM | 'opposite' | 'full' | 'occupied' | 'different' | 'capture' | EMPTY
+        NUM_COMP -> 'more' | 'less' | 'greater' | 'fewer' 
+        POSITION_RELATION -> 'on' | 'in' | 'to' | 'into' | 'onto'
+        PART_RELATION -> 'of'
+        TEMPORAL_RELATION -> 'at' | 'when'
+        NUM -> '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'one' | 'two' | 'three' | 'four' | 'five' | 'six' | 'seven' | 'eight' | 'nine' | 'ten' | 'no' | 'neither' | 'all' | 'every' | 'both'
         EMPTY -> 'empty' | 'blank' | 'open'
         """)
     if choice == 3:
@@ -80,7 +93,7 @@ def get_grammar(choice):
     return grammar
 
 def remove_stopwords(wordlist):
-    stopwords = ['the', 'than', 'a', 'an', 'can', 'getting', 'at', '\'s', '\'', '.', 'there', 'be', 'that', 'any', 'who', 'with']
+    stopwords = ['the', 'a', 'an', 'can', 'getting', '\'s', '\'', '.', 'there', 'be', 'that', 'any', 'who', 'with', 'may', 'every', 'either']
 
     return [w for w in wordlist if not w in stopwords]
 
@@ -118,7 +131,7 @@ def parse(sentence, choice):
 
     #return trees
 
-def testparser(sentence_file, choice):
+def test_parser(sentence_file, choice):
     for sentence in open(sentence_file):
         sentence.strip()
         print sentence
