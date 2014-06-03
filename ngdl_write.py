@@ -65,10 +65,20 @@ def perpetuate_untouched_cells(gdl_file):
     (distinct_cells ?col ?row ?src_col ?src_row)
     (distinct_cells ?col ?row ?dest_col ?dest_row))\n\n""")    
 
-def place_piece_next_state(gdl_file):
+def place_occupant(gdl_file):
     gdl_file.write("""(<= (next (cell ?col ?row ?player ?occupant))
-    (does ?player (place ?occupant ?col ?row))
-    (true (cell ?col ?row none none)))""")
+    (does ?player (place ?occupant ?col ?row)))""")
+
+#def drop_occupant(gdl_file, direction):
+#    if direction == "top":
+#        gdl_file.write()
+#    elif direction == "bottom":
+
+##############################################################
+# Piece move (next state) definitions for pre-defined pieces #
+##############################################################
+
+
 
 # Potentially legal player moves
 
@@ -77,9 +87,12 @@ def noop(gdl_file):
     (role ?player)
     (not (true (control ?player))))\n\n""")
 
-def place_occupant(gdl_file, conditions):
+def place_occupant_conditions(gdl_file, conditions):
     gdl_file.write("(<= (legal ?player (place ?occupant ?col ?row))\n " +
+                   "\t(true (control ?player)))\n" + 
                    insert_conditions(conditions))
+
+#def drop_occupant_conditions(gdl_file, direction, conditions):
 
 ########################################################
 # This section contains a bunch of different constants #
@@ -427,25 +440,19 @@ def write_var_succ(gdl_file, ceiling, x=1, y=0):
             gdl_file.write("\t(succ ?row" + str(i) +
                            " ?row" + str(i+1) + ")\n")
 
-#################################################
-# Piece move definitions for pre-defined pieces #
-#################################################
 
-# X and O in Tic-Tac-Toe
-def marker_move(gdl_file):
-    return
 
 ###########################################################
 # This section is for dealing with the various conditions #
 # that might need to be satisfied.                        #
 ###########################################################
 
-cond_dictionary = (("empty cell", "(true (cell ?col ?row ?player none))"),
-                   ("uncontrolled cell", "(true (cell ?col ?row none ?occupant))"),
-                   ("board open", "board_open"),
-                   ("less"),
-                   ("x-in-a-row"),
-                   ())
+cond_dictionary = {"empty cell": "(true (cell ?col ?row ?player none))",
+                   "uncontrolled cell": "(true (cell ?col ?row none ?occupant))",
+                   "board open": "board_open",
+                   "less",
+                   "x-in-a-row",
+                   }
 
 #def insert_conditions(conditions):
 #

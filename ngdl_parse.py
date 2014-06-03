@@ -129,7 +129,7 @@ def parse(sentence, choice):
     for tree in trees:
         print tree
 
-    #return trees
+    return trees
 
 def test_parser(sentence_file, choice):
     for sentence in open(sentence_file):

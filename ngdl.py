@@ -1,4 +1,5 @@
 import ngdl_classes
+import ngdl_parse
 import re
 import nltk
 
@@ -68,5 +69,9 @@ def game_pieces_dialog(game):
 
 def goal_dialog(game):
     win_conditions = raw_input("How does a player win?: ")
+    parse_trees = ngdl_parse.parse(win_conditions, 1)
+
+    for tree in parse_trees:
+        
 
 #def terminal_dialog(game):
