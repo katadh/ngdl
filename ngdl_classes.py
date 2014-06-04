@@ -45,6 +45,70 @@ class Piece:
     def __init__(self, n):
         self.name = n
 
-def translate(input_file, output_file):
-    nl_file = open(input_file, 'r')
-    gdl_file = open(output_file, 'w')
+class Tree:
+
+    def __init__(self, n):
+        self.name = n
+        self.value = ""
+        self.children = []
+        self.parent = None
+
+    def __str__(self, n=0):
+        n = n + 1
+        string = "(" + self.name + " " + self.value
+        if self.children:
+            string = string + "\n"
+            for child in self.children:
+                string = string + "\t"*n + child.__str__(n) + "\n"
+            return string[:-1] + ")"
+        else:
+            return string + ")"
+
+    def __getitem__(self, index):
+        return self.children[index]
+
+    def __setitem__(self, index, value):
+        self.children[index] = value
+
+    # finds the closest distinct node with the desired name and value
+    def find_closest_node(self, node_name=None, node_value=None):
+        nodes = [self.parent]
+        nodes = nodes + self.children
+        visited = [self]
+
+        while len(nodes) > 0:
+            node = nodes.pop()
+            visited.append(node)
+
+            if node_name != None:
+                if node_value != None:
+                    if node.name == node_name and node.value == node_value:
+                        return node
+                else:
+                    if node.name == node_name:
+                        return node
+            elif node_value != None:
+                    if node.value == node_value:
+                        return node
+            else:
+                    return None
+
+            if node.parent not in visited:
+                nodes.append(node.parent)
+            nodes = nodes + [child for child in node.children if child not in visited]
+
+        return None
+
+    def nodes_in_subtrees(self):
+        nodes = [self]
+        if self.children:
+            for child in self.children:
+                nodes = nodes + child.nodes_in_subtrees()
+        return nodes
+
+
+    def find_root(self):
+        if self.parent == None:
+            return self
+        else:
+            return self.parent.find_root()

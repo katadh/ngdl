@@ -71,7 +71,35 @@ def goal_dialog(game):
     win_conditions = raw_input("How does a player win?: ")
     parse_trees = ngdl_parse.parse(win_conditions, 1)
 
-    for tree in parse_trees:
+    for nltk_tree in parse_trees:
+        tree = translate_tree(nltk_tree)
+        result = tree.find_closest_node("RESULT")
+        conditions = tree.find_closest_node("COND")
+
+def check_goal_result():
+    
         
 
 #def terminal_dialog(game):
+
+def translate_tree(nltk_tree):
+    if nltk_tree.height() == 2:
+        tree = ngdl_classes.Tree(nltk_tree.node)
+        tree.value = nltk_tree[0]
+        return tree
+        
+    tree = ngdl_classes.Tree(nltk_tree.node)
+    for subtree in nltk_tree:
+        tree.children.append(translate_tree(subtree))
+    for subtree in tree.children:
+        subtree.parent = tree
+
+    return tree
+        
+
+cond_dictionary = {"empty cell": ["(true (cell ?col ?row ?player none))", None],
+                   "uncontrolled cell": ["(true (cell ?col ?row none ?occupant))", None],
+                   "board open": ["board_open", "board_open"],
+                   "less": ["(less {0} {1})", "less"],
+                   "x-in-a-row": ["({0}_in_a_row {1} {2})", "x_in_a_row"]
+                   }

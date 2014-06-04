@@ -5,6 +5,15 @@
 import ngdl
 import re
 
+def insert_conditions(conditions):
+
+    code = ""
+    for cond in conditions:
+        code = code + "\t" + cond + "\n "
+
+    code = code[:-2]
+    return cod
+
 # Takes a board object and output file and
 # writes gdl code to initialize the board
 # in the file
@@ -90,7 +99,7 @@ def noop(gdl_file):
 def place_occupant_conditions(gdl_file, conditions):
     gdl_file.write("(<= (legal ?player (place ?occupant ?col ?row))\n " +
                    "\t(true (control ?player)))\n" + 
-                   insert_conditions(conditions))
+                   insert_conditions(conditions) + ")\n\n")
 
 #def drop_occupant_conditions(gdl_file, direction, conditions):
 
@@ -442,19 +451,4 @@ def write_var_succ(gdl_file, ceiling, x=1, y=0):
 
 
 
-###########################################################
-# This section is for dealing with the various conditions #
-# that might need to be satisfied.                        #
-###########################################################
 
-cond_dictionary = {"empty cell": "(true (cell ?col ?row ?player none))",
-                   "uncontrolled cell": "(true (cell ?col ?row none ?occupant))",
-                   "board open": "board_open",
-                   "less",
-                   "x-in-a-row",
-                   }
-
-#def insert_conditions(conditions):
-#
-#    for cond in conditions:
-#        

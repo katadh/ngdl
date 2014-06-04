@@ -8,7 +8,7 @@ import nltk
 def get_grammar(choice):
     if choice == 1:
         grammar = nltk.parse_cfg("""
-        S -> IF COND THEN RESULT | RESULT IF COND | PLAYER ACTION RESULT
+        S -> IF COND THEN RESULT | RESULT IF COND | COND RESULT
         RESULT -> STATE | ACTION | ENTITY ACTION
         COND -> COND AND COND | COND OR COND | CONDLIST AND COND | CONDLIST OR COND | STATE | NOT STATE | ENTITY ACTION
         CONDLIST -> COND ',' CONDLIST | COND ',' COND
