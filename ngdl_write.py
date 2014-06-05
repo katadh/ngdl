@@ -5,6 +5,18 @@
 import ngdl
 import re
 
+# We want to keep track of which definition functions we've
+# already called so we aren't writing the same code into the
+# gdl file multiple times
+
+function_dict = {"less":0,
+                 "distinct_cells":0,
+                 "adjacent_cells":0,
+                 "adjacent_cols":0,
+                 "adjacent_rows":0,
+                 "successors":0,
+                 "board_open":0}
+
 def insert_conditions(conditions):
 
     code = ""
@@ -55,12 +67,23 @@ def players(gdl_file, player_list):
     gdl_file.write("\n")
 
     # The embedded loops are for if there is more than 2 players
+    # Currently does not handle teams
     for player1 in player_list:
         for player2 in player_list:
             if player1 != player2:
                 gdl_file.write("(opponent " + player1.name + " " +
                                player2.name + ")\n")
     gdl_file.write("\n")
+
+    # Switch control of players
+    for player_num in range(len(player_list)):
+        next_player_num = player_num + 1
+        if next_player_num == len(player_list):
+            next_player_num = 0
+        gdl_file.write("(<= next (control " + player_list[player_num] + ")\n" +
+                       "\t(true (control " + player_list[next_player_num] + ")))\n")
+    gdl_file.write("\n")
+        
         
 
 # This a function that says that cells not involved in
@@ -78,18 +101,22 @@ def place_occupant(gdl_file):
     gdl_file.write("""(<= (next (cell ?col ?row ?player ?occupant))
     (does ?player (place ?occupant ?col ?row)))""")
 
-#def drop_occupant(gdl_file, direction):
-#    if direction == "top":
-#        gdl_file.write()
-#    elif direction == "bottom":
+def drop_occupant(gdl_file):
+    gdl_file.write("""(<= (next cell ?col ?row2 ?player ?occupant)
+    (does ?player (drop ?occupant ?col))
+    (true (cell ?col ?row2 ?any none))
+    (succ ?row1 ?row2)
+    (not (true (cell ?col ?row1 ?any none))))\n\n""")
+        
 
 ##############################################################
 # Piece move (next state) definitions for pre-defined pieces #
 ##############################################################
 
 
-
-# Potentially legal player moves
+##################################
+# Potentially legal player moves #
+##################################
 
 def noop(gdl_file):
     gdl_file.write("""(<= (legal ?player noop)
@@ -101,24 +128,31 @@ def place_occupant_conditions(gdl_file, conditions):
                    "\t(true (control ?player)))\n" + 
                    insert_conditions(conditions) + ")\n\n")
 
-#def drop_occupant_conditions(gdl_file, direction, conditions):
+def drop_occupant_conditions(gdl_file, conditions):
+    gdl_file.write("(<= (legal ?player (drop ?occupant ?col))\n" +
+                   "\t(true (control ?player))\n" +
+                   insert_conditions(conditions) + ")\n\n")
+
+############################
+# Goal and Terminal States #
+############################
+
+def game_win(gdl_file, conditions, player=""):
+    if player == "":
+        gdl_file.write("(<= (goal ?player 100)\n" +
+                       insert_conditions(conditions) + ")\n\n")
+    else:
+        gdl_file.write("(<= (gloal " + player + " 100)\n" +
+                       insert_conditions(conditions) +  ")\n\n")
+
+def game_end(gdl_file, conditions):
+    gdl_file.write("(<= terminal\n" + insert_conditions(conditions) + ")\n\n")
 
 ########################################################
 # This section contains a bunch of different constants #
 # or predefined functions that might be necessary      #
 ########################################################
 
-# We want to keep track of which definition functions we've
-# already called so we aren't writing the same code into the
-# gdl file multiple times
-
-function_dict = {"less":0,
-                 "distinct_cells":0,
-                 "adjacent_cells":0,
-                 "adjacent_cols":0,
-                 "adjacent_rows":0,
-                 "successors":0,
-                 "board_open":0}
 
 def less(gdl_file):
     gdl_file.write("""(<= (less ?x ?y)
@@ -174,14 +208,23 @@ def adjacent_cells(gdl_file):
 
 def adjacent_cols(gdl_file):
     gdl_file.write("""(<= (adjacent_cols ?col1 ?col2)
-    (or (next_column ?col1 ?col2) (next_column ?col2 ?col1))\n\n""")
+    (or (next_column ?col1 ?col2) (next_column ?col2 ?col1)))\n\n""")
 
 def adjacent_rows(gdl_file):
     gdl_file.write("""(<= (adjacent_rows ?row1 ?row2)
-    (or (next_row ?row1 ?row2) (next_row ?row2 ?row1))\n\n""")
+    (or (next_row ?row1 ?row2) (next_row ?row2 ?row1)))\n\n""")
+
+def column_open(gdl_file):
+    gdl_file.write("""(<= (column_open ?col)
+    (true (cell ?col ?row ?player none)))\n\n""")
+
+def row_open(gdl_file):
+    gdl_file.write("""(<= (row_open ?row)
+    (true (cell ?col ?row ?player none)))\n\n""")
 
 def board_open(gdl_file):
     gdl_file.write("(<= board_open (true (cell ?col ?row ?player none)))\n\n")
+
 
 # This function is for creating code that tests if x
 # number of cells in a row meet a certain condition.

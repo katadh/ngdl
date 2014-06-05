@@ -76,8 +76,27 @@ def goal_dialog(game):
         result = tree.find_closest_node("RESULT")
         conditions = tree.find_closest_node("COND")
 
-def check_goal_result():
-    
+def process_result(result):
+    return
+
+def process_conditions(conds):
+    conditions = []
+    if "OR" in [child.name for child in conds.children]:
+        conditions.append("OR")
+        for child in conds.children:
+            if child.name == "COND":
+                conditions.append(process_condition(child))
+    elif "AND" in [child.name for child in conds.children]:
+        conditions.append("AND")
+        for child in conds.children:
+            if child.name == "COND":
+                conditions.append(process_condition(child))
+    else:
+        conditions.append("COND")
+        conditions.append(process_condition(conds))
+
+def process_condition(cond):
+    return
         
 
 #def terminal_dialog(game):
@@ -97,9 +116,11 @@ def translate_tree(nltk_tree):
     return tree
         
 
-cond_dictionary = {"empty cell": ["(true (cell ?col ?row ?player none))", None],
-                   "uncontrolled cell": ["(true (cell ?col ?row none ?occupant))", None],
+cond_dictionary = {"empty cell": ["(true (cell ?col ?row ?any none))", None],
+                   "uncontrolled cell": ["(true (cell ?col ?row none ?any))", None],
                    "board open": ["board_open", "board_open"],
+                   "board full": ["(not board_open)", "board_open"],
+                   "open column": ["(column_open ?col)", "column_open"]
                    "less": ["(less {0} {1})", "less"],
-                   "x-in-a-row": ["({0}_in_a_row {1} {2})", "x_in_a_row"]
+                   "in-a-row": ["({0}_in_a_row {1} {2})", "x_in_a_row"]
                    }

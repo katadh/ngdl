@@ -107,8 +107,18 @@ class Tree:
         return nodes
 
 
-    def find_root(self):
+    def root(self):
         if self.parent == None:
             return self
         else:
-            return self.parent.find_root()
+            return self.parent.root()
+
+    def leaves(self):
+        leaves = []
+        if self.children:
+            for child in self.children:
+                leaves = leaves + child.leaves()
+            return leaves
+        else:
+            return [self]
+            
