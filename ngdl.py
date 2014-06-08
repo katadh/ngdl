@@ -97,7 +97,6 @@ def process_conditions(conds):
 
 def process_condition(cond):
     return
-        
 
 #def terminal_dialog(game):
 
@@ -109,18 +108,19 @@ def translate_tree(nltk_tree):
         
     tree = ngdl_classes.Tree(nltk_tree.node)
     for subtree in nltk_tree:
-        tree.children.append(translate_tree(subtree))
+        if type(subtree) == str:
+            tree.value = subtree
+        else:
+            tree.children.append(translate_tree(subtree))
+
     for subtree in tree.children:
         subtree.parent = tree
 
     return tree
         
 
-cond_dictionary = {"empty cell": ["(true (cell ?col ?row ?any none))", None],
-                   "uncontrolled cell": ["(true (cell ?col ?row none ?any))", None],
-                   "board open": ["board_open", "board_open"],
-                   "board full": ["(not board_open)", "board_open"],
-                   "open column": ["(column_open ?col)", "column_open"]
-                   "less": ["(less {0} {1})", "less"],
-                   "in-a-row": ["({0}_in_a_row {1} {2})", "x_in_a_row"]
+cond_dictionary = {"empty": [[["NUM", "?col"], ["NUM", "?row"], ["BOARD_PART"]], "(empty {0} {1} {2})", "board_part_empty"],
+                   "open": [[["NUM", "?col"], ["NUM", "?row"], ["BOARD_PART"]], "(open {0} {1} {2})", "board_part_open"],
+                   "full": [[["NUM", "?col"], ["NUM", "?row"], ["BOARD_PART"]], "(not (open {0} {1} {2}))", "board_part_open"],
+                   "in-a-row": [[["NUM"], ["PLAYER"], ["PIECE"]], "({0}_in_a_row {1} {2})", "x_in_a_row"]
                    }

@@ -25,20 +25,20 @@ def get_grammar(choice):
         NOT -> 'not'
         AND -> 'and'
         OR -> 'or'
-        STATE -> 'in-a-row' | 'in-order' | 'full' | 'occupied' | EMPTY
+        STATE -> 'in-a-row' | 'in-order' | 'full' | 'occupied' | 'open' | EMPTY
         ACTION -> 'win' | 'lose' | 'end' | 'move' | 'capture' | 'place' | 'mark' | 'reach' | 'drop'
         POSSESS -> 'get' | 'have'
         BOARD_PART -> 'board' | 'cell' | 'square' | 'row' | 'column' | 'side' | 'diagonal'
         TEMPORAL -> 'turn' | 'game' | 'match' | 'time' | 'end' | 'beginning'
         PLAYER -> 'player' | 'player' NUM | MOD 'player' | 'they' | 'their' | 'opponent' | 'whoever'
         PIECE -> 'pawn' | 'rook' | 'knight' | 'bishop' | 'queen' | 'king' | 'x' | 'o' | 'disc' | 'piece' | 'it'
-        MOD -> 'most' | 'least' | 'first' | 'last' | 'middle' | 'center' | 'top' | 'bottom' | 'left' | 'right' | NUM 'x' NUM | NUM 'by' NUM | 'opposite' | 'full' | 'occupied' | 'different' | EMPTY
+        MOD -> 'most' | 'least' | 'first' | 'last' | 'middle' | 'center' | 'top' | 'bottom' | 'left' | 'right' | NUM 'x' NUM | NUM 'by' NUM | 'opposite' | 'full' | 'occupied' | 'different' | 'open' | EMPTY
         NUM_COMP -> 'more' | 'less' | 'greater' | 'fewer'
         POSITION_RELATION -> 'on' | 'in' | 'to' | 'into' | 'onto'
         PART_RELATION -> 'of'
         TEMPORAL_RELATION -> 'at' | 'when'
         NUM -> '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'one' | 'two' | 'three' | 'four' | 'five' | 'six' | 'seven' | 'eight' | 'nine' | 'ten' | 'no' | 'neither' | 'all' | 'every' | 'both'
-        EMPTY -> 'empty' | 'blank' | 'open'
+        EMPTY -> 'empty' | 'blank'
         """)
     if choice == 2:
         grammar = nltk.parse_cfg("""
@@ -47,7 +47,7 @@ def get_grammar(choice):
         CONDLIST -> COND ',' CONDLIST | COND ',' COND
         STATE -> ENTITY STATE | STATE POSITION_RELATION ENTITY | STATE TEMPORAL_RELATION STATE | NUM_COMP | ENTITY
         ACTION -> NOT ACTION | POSSESS STATE | 'to' ACTION | 'have' ACTION | ACTION ENTITY | ACTION POSITION_RELATION ENTITY | ACTION TEMPORAL_RELATION STATE
-        ENTITY -> PLAYER | NUM PLAYER | PIECE | NUM PIECE | BOARD_PART | NUM BOARD_PART | TEMPORAL | NUM TEMPORAL | ENTITY PART_RELATION ENTITY | POSSESSION | NUM POSSESSION | ENTITY OR ENTITY | ENTITY AND ENTITY | ENTITYLIST OR ENTITY | ENTITYLIST AND ENTITY
+        ENTITY -> PLAYER | NUM PLAYER | MOD PLAYER | PIECE | NUM PIECE | BOARD_PART | NUM BOARD_PART | TEMPORAL | NUM TEMPORAL | ENTITY PART_RELATION ENTITY | POSSESSION | NUM POSSESSION | ENTITY OR ENTITY | ENTITY AND ENTITY | ENTITYLIST OR ENTITY | ENTITYLIST AND ENTITY
         ENTITYLIST -> ENTITY ',' ENTITYLIST | ENTITY ',' ENTITY
         PIECE -> MOD PIECE
         BOARD_PART -> MOD BOARD_PART
@@ -63,7 +63,7 @@ def get_grammar(choice):
         POSSESS -> 'get' | 'have'
         BOARD_PART -> 'board' | 'cell' | 'square' | 'row' | 'column' | 'side' | 'diagonal'
         TEMPORAL -> 'turn' | 'game' | 'match' | 'move' | 'time' | 'end' | 'beginning'
-        PLAYER -> 'player' | 'player' NUM | MOD 'player' | 'they' | 'their' | 'opponent' | 'whoever'
+        PLAYER -> 'player' | 'player' NUM | 'they' | 'their' | 'opponent' | 'whoever'
         PIECE -> 'pawn' | 'rook' | 'knight' | 'bishop' | 'queen' | 'king' | 'x' | 'o' | 'disc' | 'piece' | 'it'
         MOD -> 'most' | 'least' | 'first' | 'last' | 'middle' | 'center' | 'top' | 'bottom' | 'left' | 'right' | NUM 'x' NUM | NUM 'by' NUM | 'opposite' | 'full' | 'occupied' | 'different' | 'capture' | EMPTY
         NUM_COMP -> 'more' | 'less' | 'greater' | 'fewer' 
