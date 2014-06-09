@@ -1,22 +1,27 @@
 import ngdl_classes
 import ngdl_parse
+import ngdl_write
 import re
 import nltk
+import global_vars
 
-game = ngdl_classes.Game()
+global_vars.init()
 
 def start_dialog():
+    output = open("test.txt", "w")
     print "Welcome to the natural language game creation program for general game playing!"
     print "First we'll work on defining the game environment"
     board_size_dialog()
     player_num_dialog()
     game_pieces_dialog()
+    player_move_dialog()
+    goal_dialog()
+    terminal_dialog()
+    ngdl_write.write_gdl_file(output)
+    output.close()
     
 def board_size_dialog():
-    global game
-    print "For now I can only make games that are a grid of squares"
-    
-    in_board_size = raw_input("What size would you like your game to be?: ")
+    in_board_size = raw_input("What size would you like your board to be?: ")
     valid_input = re.search("([0-9]+)\s?(by|x|X)\s?([0-9]+)", in_board_size)
 
     while not valid_input:
@@ -28,10 +33,10 @@ def board_size_dialog():
 
     #confirmation = raw_input("To confirm, there will be " + board_size[0] + " columns and " + board_size[1] + " rows?: ")
 
-    game.board = ngdl_classes.Board((int(board_size[0]), int(board_size[1])))
+    global_vars.game.board = ngdl_classes.Board((int(board_size[0]), int(board_size[1])))
+    global_vars.write_queue.append(["board" , []])
 
 def player_num_dialog():
-    global game
     in_player_num = raw_input("How many players does your game have?: ")
     valid_input = re.search("[0-9]+", in_player_num)
 
@@ -42,18 +47,19 @@ def player_num_dialog():
 
     num_players = int(valid_input.group())
 
-    for p in range(1,p+1):
-        game.players.append(Player(str(i)))
+    for p in range(1,num_players+1):
+        global_vars.game.players.append(ngdl_classes.Player("player" + str(p)))
+
+    global_vars.write_queue.append(["players", []])
 
 def game_pieces_dialog():
-    global game
 
-    for player in game.players:
+    for player in global_vars.game.players:
         in_piece_names = raw_input("What pieces does " + player.name + " have?: ")
-        pieces = re.findall("([0-9]*)\s|^([^\W\d]+)", in_piece_list)
+        pieces = re.findall("([0-9]*)\s|^([^\W\d]+)", in_piece_names)
 
         for p in pieces:
-            game.pieces[p[1]] = Piece(p[1])
+            global_vars.game.pieces[p[1]] = ngdl_classes.Piece(p[1])
                 
             if p[0] == "" or int(p[0]) > 1:
                 p_positions = raw_input("What are the starting positions <col, row> of the " +
@@ -65,21 +71,61 @@ def game_pieces_dialog():
             positions = re.findall("([0-9]+),\s?([0-9]+)", p_positions)
             if positions:
                 for pos in positions:
-                    game.board.starting_positions[(int(pos[0]), int(pos[1]))] = player.name + " " + piece.name
+                    global_vars.game.board.starting_positions[(int(pos[0]), int(pos[1]))] = player.name + " " + piece.name
 
-#def player_move_dialog(game):
+def player_move_dialog():
+    move_conditions = raw_input("What can a player do on their turn?: ")
+    parse_trees = ngdl_parse.parse(move_conditions, 2)
+        
+    nltk_tree = parse_trees[0]
+    tree = translate_tree(nltk_tree)
 
-#def piece_move_dialog(game):
+    conditions = process_condition(tree)
+    
+    action = tree.find_closest_node("ACTION")
+    while action.children:
+        index = [child.name for child in action.children].index("ACTION")
+        action = action[index]
+
+    if action.value == "drop":
+        drop_response = raw_input("By 'drop', do you mean dropping a piece like in Connect-4, or placing a piece like in Shogi?: ")        
+        drop_response.lower()
+        if re.match("[connect\-4|drop]", drop_response):
+            global_vars.write_queue.append(["drop_occupant_conditions", [[conditions]]])
+            global_vars.write_queue.append(["perpetuate_untouched_cells", [["drop"]]])
+        else:
+            global_vars.write_queue.append(["place_occupant_conditions", [[conditions]]])
+            global_vars.write_queue.append(["perpetuate_untouched_cells", [["place"]]])
+    elif action.value in ["place", "mark"]:
+        global_vars.write_queue.append(["place_occupant_conditions", [[conditions]]])
+        global_vars.write_queue.append(["perpetuate_untouched_cells", [["place"]]])
+            
+
+
+#def piece_move_dialog():
 
 def goal_dialog():
-    global game
     win_conditions = raw_input("How does a player win?: ")
     parse_trees = ngdl_parse.parse(win_conditions, 1)
 
-    for nltk_tree in parse_trees:
-        tree = translate_tree(nltk_tree)
-        result = tree.find_closest_node("RESULT")
-        conditions = tree.find_closest_node("COND")
+    nltk_tree = parse_trees[0]
+    tree = translate_tree(nltk_tree)
+
+    #result = tree.find_closest_node("RESULT")
+    conditions_tree = tree.find_closest_node("COND")
+    conditions = process_condition(conditions_tree)
+    global_vars.write_queue.append(["win_conditions", [[conditions], ""]])
+
+def terminal_dialog():
+    game_end_conditions = raw_input("Aside from a player winning, how does the game end?: ")
+    parse_trees = ngdl_parse.parse(game_end_conditions, 1)
+
+    nltk_tree = parse_trees[0]
+    tree = translate_tree(nltk_tree)
+
+    conditions_tree = tree.find_closest_node("COND")
+    conditions = process_condition(conditions_tree)
+    global_vars.write_queue.append(["game_end_conditions", [[conditions]]])
 
 def process_result(result):
     return
@@ -99,6 +145,7 @@ def process_conditions(conds):
     else:
         conditions.append("COND")
         conditions.append(process_condition(conds))
+    return conditions
 
 def process_condition(cond_node):
     for leaf in cond_node.leaves():
@@ -125,6 +172,11 @@ def process_condition(cond_node):
                     slot_values.append(process_piece(slot_node))
                 else:
                     slot_values.append(slot_node.value)
+
+            if cond_definition[-1]:
+                global_vars.write_queue.append([cond_definition[2], slot_values])
+            else:
+                global_vars.write_queue.append([cond_definition[2], []])
             return cond_definition[1].format(*slot_values)
                     
 
@@ -153,7 +205,6 @@ def process_piece(piece_node):
     else:
         return piece.value
 
-#def terminal_dialog(game):
 
 def translate_tree(nltk_tree):
     if nltk_tree.height() == 2:
@@ -174,8 +225,8 @@ def translate_tree(nltk_tree):
     return tree
         
 
-cond_dictionary = {"empty": [[["NUM", "?col"], ["NUM", "?row"], ["BOARD_PART"]], "(empty {0} {1} {2})", "board_part_empty"],
-                   "open": [[["NUM", "?col"], ["NUM", "?row"], ["BOARD_PART"]], "(open {0} {1} {2})", "board_part_open"],
-                   "full": [[["NUM", "?col"], ["NUM", "?row"], ["BOARD_PART"]], "(not (open {0} {1} {2}))", "board_part_open"],
-                   "in-a-row": [[["NUM"], ["PLAYER"], ["PIECE"]], "({0}_in_a_row {1} {2})", "x_in_a_row"]
+cond_dictionary = {"empty": [[["NUM", "?col"], ["NUM", "?row"], ["BOARD_PART"]], "(empty {0} {1} {2})", "board_part_empty", False],
+                   "open": [[["NUM", "?col"], ["NUM", "?row"], ["BOARD_PART"]], "(open {0} {1} {2})", "board_part_open", False],
+                   "full": [[["NUM", "?col"], ["NUM", "?row"], ["BOARD_PART"]], "(not (open {0} {1} {2}))", "board_part_open", False],
+                   "in-a-row": [[["NUM"], ["PLAYER", "?player"], ["PIECE", "?piece"]], "({0}_in_a_row {1} {2})", "x_in_a_row", True]
                    }

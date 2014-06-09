@@ -2,13 +2,15 @@
 # the intermediate representation of the game
 # and writing the corresponding gdl into a .kif.
 
-import ngdl
+import ngdl_classes
 import re
 import sys
+import global_vars
+
+global_vars.init()
 
 # This these are the other functions that must be called
-# for each function to work correctly. The must_include
-# item is for required functions for any game
+# for each function to work correctly.
 
 func_prereqs = {"board":[],
                 "players":[],
@@ -19,6 +21,7 @@ func_prereqs = {"board":[],
                 "place_occupant_conditions":[],
                 "drop_occupant_conditions":[],
                 "goals":["win_conditions", "game_end_conditions"],
+                "terminal":["game_end_conditions"],
                 "win_conditions":[],
                 "game_end_conditions":[],
                 "less":["successors"],
@@ -29,7 +32,9 @@ func_prereqs = {"board":[],
                 "adjacent_cols":[],
                 "adjacent_rows":[],
                 "board_part_open":["make_true"],
-                "board_part_empty":["make_true"]}
+                "board_part_empty":["make_true"],
+                "make_true":[],
+                "x_in_a_row":[]}
 
 # We want to keep track of which definition functions we've
 # already called so we aren't writing the same code into the
@@ -54,20 +59,22 @@ func_call_tracker = {"board":0,
                      "adjacent_rows":0,
                      "successors":0,
                      "board_part_open":0,
+                     "board_part_empty":0,
+                     "make_true":0,
                      "x_in_a_row":0}
 
-write_queue = [["adjacent_cells", []]]
 
 def write_gdl_file(gdl_file):
+    print "Now writing file..."
     ngdl_write_object = sys.modules[__name__]
 
-    while write_queue:
-        [func_name, args] = write_queue.pop(0)
+    while global_vars.write_queue:
+        [func_name, args] = global_vars.write_queue.pop(0)
 
         for prereq in func_prereqs[func_name]:
-            if (prereq not in [func[0] for func in write_queue] and
+            if (prereq not in [func[0] for func in global_vars.write_queue] and
                 func_call_tracker[prereq] == 0):
-                write_queue.append([prereq, []])                
+                global_vars.write_queue.append([prereq, []])                
 
         func = getattr(ngdl_write_object, func_name)
         func(gdl_file, *args)
@@ -80,12 +87,13 @@ def insert_conditions(conditions):
         code = code + "\t" + cond + "\n "
 
     code = code[:-2]
-    return cod
+    return code
 
 # Takes a board object and output file and
 # writes gdl code to initialize the board
 # in the file
-def board(gdl_file, board):
+def board(gdl_file):
+    board = global_vars.game.board
     for col in range(1, board.size[0] + 1):
         for row in range(1, board.size[1] + 1):
             if (col, row) in board.starting_positions:
@@ -116,9 +124,10 @@ def board(gdl_file, board):
     gdl_file.write("\n")
 
 # Initialize players
-def players(gdl_file, player_list):
+def players(gdl_file):
+    player_list = global_vars.game.players
     for player in player_list:
-        gdl_file.write("(role " + player.name + " )\n")
+        gdl_file.write("(role " + player.name + ")\n")
 
     gdl_file.write("\n")
 
@@ -136,8 +145,8 @@ def players(gdl_file, player_list):
         next_player_num = player_num + 1
         if next_player_num == len(player_list):
             next_player_num = 0
-        gdl_file.write("(<= next (control " + player_list[player_num] + ")\n" +
-                       "\t(true (control " + player_list[next_player_num] + ")))\n")
+        gdl_file.write("(<= next (control " + player_list[player_num].name + ")\n" +
+                       "\t(true (control " + player_list[next_player_num].name + ")))\n")
     gdl_file.write("\n")
         
         
@@ -218,7 +227,7 @@ def goals(gdl_file):
 
 def terminal(gdl_file):
     gdl_file.write("""(<= terminal
-    game_end)""")
+    game_end)\n\n""")
 
 def win_conditions(gdl_file, conditions, player=""):
     if player == "":
@@ -316,7 +325,8 @@ def board_part_open(gdl_file):
     (make_true ?row)
     (true (cell ?any ?any2 ?player none)))\n\n""")
 
-def board_part_empty(gdl_file, board):
+def board_part_empty(gdl_file):
+    board = global_vars.game.board
     gdl_file.write("""(<= (empty ?col ?row column)
     (make_true ?row)""")
     for row in range(1, board.size[1] + 1):
@@ -353,14 +363,14 @@ def make_true(gdl_file):
 # number of cells in a row meet a certain condition.
 # For now these conditions are either that the cells are
 # controlled by the same player or contain the same occupant
-# or both. Inputting "" means that condition is irrelavent.
-# Inputting "same" means what the condition is doesn't matter
-# it just has to be consistant across all the cells.
-# Inputting some value means that value has to be true for
+# or both. Inputting some value means that value has to be true for
 # every cell i.e. "none" for uncontrolled or unoccupied cells
-def x_in_a_row(gdl_file, x, player="?player", occupant=""):
+def x_in_a_row(gdl_file, x, player="?player", occupant="?piece"):
+    if type(x) == str:
+        x = int(x)
+
     if player == "?player":
-        if occupant == "":
+        if occupant == "?piece":
             gdl_file.write("(<= (" + str(x) + "_in_a_row ?player)\n")
             write_var_succ(gdl_file, x)
             for i in range(1,x+1):
@@ -449,7 +459,7 @@ def x_in_a_row(gdl_file, x, player="?player", occupant=""):
 
     # This would mean that all sets of x squares in-a-row would satisfy the conditions
     elif player == "":
-        if occupant == "":
+        if occupant == "?piece":
             print "Error: Not valid input"
 
         elif occupant == "same":
@@ -511,7 +521,7 @@ def x_in_a_row(gdl_file, x, player="?player", occupant=""):
             gdl_file.write(")\n\n")
 
     else:
-        if occupant == "":
+        if occupant == "?piece":
             gdl_file.write("(<= (" + str(x) + "_in_a_row)\n")
             write_var_succ(gdl_file, x)
             for i in range(1,x+1):

@@ -94,11 +94,14 @@ class Tree:
 
     # finds the closest distinct node with the desired name and value
     def find_closest_node(self, node_name=None, node_value=None):
-        nodes = [self.parent]
+        if self.parent:
+            nodes = [self.parent]
+        else:
+            nodes = []
         nodes = nodes + self.children
         visited = [self]
 
-        while len(nodes) > 0:
+        while nodes:
             node = nodes.pop()
             visited.append(node)
 
@@ -115,7 +118,7 @@ class Tree:
             else:
                     return None
 
-            if node.parent not in visited:
+            if node.parent and node.parent not in visited:
                 nodes.append(node.parent)
             nodes = nodes + [child for child in node.children if child not in visited]
 
