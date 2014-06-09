@@ -70,6 +70,28 @@ class Tree:
     def __setitem__(self, index, value):
         self.children[index] = value
 
+    # Goes backward through the sentence until it finds a node with
+    # the given name or value
+    def find_previous_node(self, node_name=None, node_value=None):
+        root = self.find_ancestor()
+        nodes = root.nodes_in_subtrees()
+        start = nodes.index(self)
+
+        for i in range(start-1, -1, -1):
+            if node_name != None:
+                if node_value != None:
+                    if nodes[i].name == node_name and nodes[i].value == node_value:
+                        return nodes[i]
+                else:
+                    if nodes[i].name == node_name:
+                        return nodes[i]
+            elif node_value != None:
+                    if nodes[i].value == node_value:
+                        return nodes[i]
+            else:
+                    return None
+            
+
     # finds the closest distinct node with the desired name and value
     def find_closest_node(self, node_name=None, node_value=None):
         nodes = [self.parent]
@@ -106,12 +128,33 @@ class Tree:
                 nodes = nodes + child.nodes_in_subtrees()
         return nodes
 
+    def find_ancestor(self, node_name=None, node_value=None):
+        if node_name != None:
+            if node_value != None:
+                if node.name == node_name and node.value == node_value:
+                    return node
+            else:
+                if node.name == node_name:
+                    return node
+        elif node_value != None:
+                if node.value == node_value:
+                    return node
 
-    def root(self):
         if self.parent == None:
             return self
         else:
-            return self.parent.root()
+            return self.parent.find_ancestor(node_name, node_value)
+
+    def ancestors(self):
+        ancestors = self.get_ancestors()
+        ancestors.remove(self)
+        return ancestors
+
+    def get_ancestors(self):
+        if self.parent == None:
+            return [self]
+        else:
+            return [self] + self.parent.get_ancestors()
 
     def leaves(self):
         leaves = []

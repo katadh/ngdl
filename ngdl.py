@@ -3,15 +3,17 @@ import ngdl_parse
 import re
 import nltk
 
+game = ngdl_classes.Game()
+
 def start_dialog():
-    game = ngdl_classes.Game()
     print "Welcome to the natural language game creation program for general game playing!"
     print "First we'll work on defining the game environment"
-    board_size_dialog(game)
-    player_num_dialog(game)
-    game_pieces_dialog(game)
+    board_size_dialog()
+    player_num_dialog()
+    game_pieces_dialog()
     
-def board_size_dialog(game):
+def board_size_dialog():
+    global game
     print "For now I can only make games that are a grid of squares"
     
     in_board_size = raw_input("What size would you like your game to be?: ")
@@ -28,7 +30,8 @@ def board_size_dialog(game):
 
     game.board = ngdl_classes.Board((int(board_size[0]), int(board_size[1])))
 
-def player_num_dialog(game):
+def player_num_dialog():
+    global game
     in_player_num = raw_input("How many players does your game have?: ")
     valid_input = re.search("[0-9]+", in_player_num)
 
@@ -42,7 +45,8 @@ def player_num_dialog(game):
     for p in range(1,p+1):
         game.players.append(Player(str(i)))
 
-def game_pieces_dialog(game):
+def game_pieces_dialog():
+    global game
 
     for player in game.players:
         in_piece_names = raw_input("What pieces does " + player.name + " have?: ")
@@ -67,7 +71,8 @@ def game_pieces_dialog(game):
 
 #def piece_move_dialog(game):
 
-def goal_dialog(game):
+def goal_dialog():
+    global game
     win_conditions = raw_input("How does a player win?: ")
     parse_trees = ngdl_parse.parse(win_conditions, 1)
 
@@ -95,8 +100,58 @@ def process_conditions(conds):
         conditions.append("COND")
         conditions.append(process_condition(conds))
 
-def process_condition(cond):
-    return
+def process_condition(cond_node):
+    for leaf in cond_node.leaves():
+        if leaf.value in cond_dictionary:
+            cond_definition = cond_dictionary[leaf.value]
+            slot_values = []
+            for slot in cond_definition[0]:
+                slot_node = leaf.find_closest_node(slot[0])
+                if not slot_node:
+                    if len(slot) == 2:
+                        slot_values.append(slot[1])
+                    else:
+                        print "Slot fill error1!"
+                elif cond_node not in slot_node.ancestors():
+                    if len(slot) == 2:
+                        slot_values.append(slot[1])
+                    else:
+                        print "Slot fill error2!"
+                elif slot_node.name == "PLAYER":
+                    slot_values.append(process_player(slot_node))
+                elif slot_node.name == "BOARD_PART":
+                    slot_values.append(process_board_part(slot_node))
+                elif slot_node.name == "PIECE":
+                    slot_values.append(process_piece(slot_node))
+                else:
+                    slot_values.append(slot_node.value)
+            return cond_definition[1].format(*slot_values)
+                    
+
+def process_player(player_node):
+    return "?player"
+
+def process_board_part(board_part_node):
+    square_equivalents = ["cell"]
+    board_part = board_part_node
+    while board_part.children:
+        index = [child.name for child in board_part.children].index("BOARD_PART")
+        board_part = board_part[index]
+    if board_part.value in square_equivalents:
+        return "square"
+    else:
+        return board_part.value
+
+def process_piece(piece_node):
+    piece = piece_node
+    while piece.children:
+        index = [child.name for child in piece.children].index("PIECE")
+        piece = piece[index]
+
+    if piece.value == "piece":
+        return "?piece"
+    else:
+        return piece.value
 
 #def terminal_dialog(game):
 

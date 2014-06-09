@@ -358,8 +358,8 @@ def make_true(gdl_file):
 # it just has to be consistant across all the cells.
 # Inputting some value means that value has to be true for
 # every cell i.e. "none" for uncontrolled or unoccupied cells
-def x_in_a_row(gdl_file, x, player="same", occupant=""):
-    if player == "same":
+def x_in_a_row(gdl_file, x, player="?player", occupant=""):
+    if player == "?player":
         if occupant == "":
             gdl_file.write("(<= (" + str(x) + "_in_a_row ?player)\n")
             write_var_succ(gdl_file, x)
