@@ -2,9 +2,9 @@
 # the intermediate representation of the game
 # and writing the corresponding gdl into a .kif.
 
-import ngdl_classes
 import re
 import sys
+import ngdl_classes
 import global_vars
 
 global_vars.init()

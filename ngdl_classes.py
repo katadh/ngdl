@@ -1,13 +1,5 @@
-# This is the main ngdl file that takes user input
-# and then calls the functions from the parse and
-# write files to read the semi-natural language
-# description and write the corresponding gdl
-# description in a .kif. This file also contains
-# the various classes for the intermediate
+# This file contains the various classes for the intermediate
 # representation of the game (Board, Player, Piece...).
-
-import ngdl_parse
-import ngdl_write
 
 # Game contains players, the board,
 # goals/objectives, end conditions,

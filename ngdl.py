@@ -1,16 +1,16 @@
-import ngdl_classes
-import ngdl_parse
-import ngdl_write
 import re
 import nltk
+import ngdl_classes
 import global_vars
+import ngdl_parse
+import ngdl_write
 
 global_vars.init()
 
-def start_dialog():
-    output = open("test.txt", "w")
+def start_dialog(output_file="test.txt"):
+    output = open(output_file, "w")
     print "Welcome to the natural language game creation program for general game playing!"
-    print "First we'll work on defining the game environment"
+    #print "First we'll work on defining the game environment"
     board_size_dialog()
     player_num_dialog()
     game_pieces_dialog()
@@ -60,18 +60,24 @@ def game_pieces_dialog():
 
         for p in pieces:
             global_vars.game.pieces[p[1]] = ngdl_classes.Piece(p[1])
-                
-            if p[0] == "" or int(p[0]) > 1:
-                p_positions = raw_input("What are the starting positions <col, row> of the " +
-                                        p[1] + " that start on the board? (enter to skip): ")
-            else:
-                p_positions = raw_input("What is the starting position <col, row> of the " +
-                                        p[1] + " if it starts on the board? (enter to skip): ")
 
-            positions = re.findall("([0-9]+),\s?([0-9]+)", p_positions)
-            if positions:
-                for pos in positions:
-                    global_vars.game.board.starting_positions[(int(pos[0]), int(pos[1]))] = player.name + " " + piece.name
+        on_board_response = raw_input("Do any of the pieces start on the board?: ")
+        on_board_response = on_board_response.lower()
+        if not re.match("[no|n]", on_board_response):
+            for p in pieces:
+
+                if p[0] == "" or int(p[0]) > 1:
+                    p_positions = raw_input("What are the starting positions <col, row> of the " +
+                                            p[1] + " that start on the board? (enter to skip): ")
+                else:
+                    p_positions = raw_input("What is the starting position <col, row> of the " +
+                                            p[1] + " if it starts on the board? (enter to skip): ")
+
+                positions = re.findall("([0-9]+),\s?([0-9]+)", p_positions)
+                if positions:
+                    for pos in positions:
+                        global_vars.game.board.starting_positions[(int(pos[0]), int(pos[1]))] = player.name + " " + piece.name
+                
 
 def player_move_dialog():
     move_conditions = raw_input("What can a player do on their turn?: ")
