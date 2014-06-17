@@ -126,8 +126,8 @@ def parse(sentence, choice):
 
     trees = parser.nbest_parse(wordlist)
 
-    for tree in trees:
-        print tree
+    #for tree in trees:
+    #    print tree
 
     return trees
 

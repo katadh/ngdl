@@ -5,9 +5,12 @@ import global_vars
 import ngdl_parse
 import ngdl_write
 
-global_vars.init()
-
 def start_dialog(output_file="test.txt"):
+    if not global_vars.initialized:
+        global_vars.init()
+    else:
+        reset_global_vars()
+
     output = open(output_file, "w")
     print "Welcome to the natural language game creation program for general game playing!"
     #print "First we'll work on defining the game environment"
@@ -19,6 +22,10 @@ def start_dialog(output_file="test.txt"):
     terminal_dialog()
     ngdl_write.write_gdl_file(output)
     output.close()
+
+def reset_global_vars():
+    global_vars.write_queue = [["noop", []], ["goals", []], ["terminal", []], ["distinct_cells", []], ["successors", [50]]]
+    global_vars.game = ngdl_classes.Game()
     
 def board_size_dialog():
     in_board_size = raw_input("What size would you like your board to be?: ")
@@ -55,13 +62,13 @@ def player_num_dialog():
 def game_pieces_dialog():
 
     for player in global_vars.game.players:
-        in_piece_names = raw_input("What pieces does " + player.name + " have?: ")
+        in_piece_names = raw_input("What types of pieces does " + player.name + " have?: ")
         pieces = re.findall("([0-9]*)\s|^([^\W\d]+)", in_piece_names)
 
         for p in pieces:
             global_vars.game.pieces[p[1]] = ngdl_classes.Piece(p[1])
 
-        on_board_response = raw_input("Do any of the pieces start on the board?: ")
+        on_board_response = raw_input("Do any of " + player.name + "'s pieces start on the board?: ")
         on_board_response = on_board_response.lower()
         if not re.match("[no|n]", on_board_response):
             for p in pieces:
@@ -233,6 +240,6 @@ def translate_tree(nltk_tree):
 
 cond_dictionary = {"empty": [[["NUM", "?col"], ["NUM", "?row"], ["BOARD_PART"]], "(empty {0} {1} {2})", "board_part_empty", False],
                    "open": [[["NUM", "?col"], ["NUM", "?row"], ["BOARD_PART"]], "(open {0} {1} {2})", "board_part_open", False],
-                   "full": [[["NUM", "?col"], ["NUM", "?row"], ["BOARD_PART"]], "(not (open {0} {1} {2}))", "board_part_open", False],
+                   "full": [[["NUM", "?col"], ["NUM", "?row"], ["BOARD_PART"]], "(full {0} {1} {2})", "board_part_full", False],
                    "in-a-row": [[["NUM"], ["PLAYER", "?player"], ["PIECE", "?piece"]], "({0}_in_a_row {1} {2})", "x_in_a_row", True]
                    }

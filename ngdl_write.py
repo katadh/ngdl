@@ -7,8 +7,6 @@ import sys
 import ngdl_classes
 import global_vars
 
-global_vars.init()
-
 # This these are the other functions that must be called
 # for each function to work correctly.
 
@@ -18,8 +16,8 @@ func_prereqs = {"board":[],
                 "place_occupant":["place_occupant_conditions"],
                 "drop_occupant":["drop_occupant_conditions", "lowest_open_cell"],
                 "noop":[],
-                "place_occupant_conditions":[],
-                "drop_occupant_conditions":[],
+                "place_occupant_conditions":["place_occupant"],
+                "drop_occupant_conditions":["drop_occupant", "lowest_open_cell"],
                 "goals":["win_conditions", "game_end_conditions"],
                 "terminal":["game_end_conditions"],
                 "win_conditions":[],
@@ -32,6 +30,7 @@ func_prereqs = {"board":[],
                 "adjacent_cols":[],
                 "adjacent_rows":[],
                 "board_part_open":["make_true"],
+                "board_part_full":["board_part_open", "make_true"],
                 "board_part_empty":["make_true"],
                 "make_true":[],
                 "x_in_a_row":[]}
@@ -40,44 +39,50 @@ func_prereqs = {"board":[],
 # already called so we aren't writing the same code into the
 # gdl file multiple times
 
-func_call_tracker = {"board":0,
-                     "players":0,
-                     "perpetuate_untouched_cells":0,
-                     "place_occupant":0,
-                     "drop_occupant":0,
-                     "noop":0,
-                     "place_occupant_conditions":0,
-                     "drop_occupant_conditions":0,
-                     "goals":0,
-                     "terminal":0,
-                     "game_win":0,
-                     "game_end":0,
-                     "less":0,
-                     "distinct_cells":0,
-                     "adjacent_cells":0,
-                     "adjacent_cols":0,
-                     "adjacent_rows":0,
-                     "successors":0,
-                     "board_part_open":0,
-                     "board_part_empty":0,
-                     "make_true":0,
-                     "x_in_a_row":0}
+func_call_tracker = {"board":False,
+                     "players":False,
+                     "perpetuate_untouched_cells":False,
+                     "place_occupant":False,
+                     "drop_occupant":False,
+                     "noop":False,
+                     "place_occupant_conditions":False,
+                     "drop_occupant_conditions":False,
+                     "goals":False,
+                     "terminal":False,
+                     "win_conditions":False,
+                     "game_end_conditions":False,
+                     "less":False,
+                     "lowest_open_cell":False,
+                     "distinct_cells":False,
+                     "adjacent_cells":False,
+                     "adjacent_cols":False,
+                     "adjacent_rows":False,
+                     "successors":False,
+                     "board_part_open":False,
+                     "board_part_full":False,
+                     "board_part_empty":False,
+                     "make_true":False,
+                     "x_in_a_row":False}
 
 
 def write_gdl_file(gdl_file):
     print "Now writing file..."
     ngdl_write_object = sys.modules[__name__]
 
+    for func in func_call_tracker:
+        func_call_tracker[func] = False
+
     while global_vars.write_queue:
         [func_name, args] = global_vars.write_queue.pop(0)
 
         for prereq in func_prereqs[func_name]:
-            if (prereq not in [func[0] for func in global_vars.write_queue] and
-                func_call_tracker[prereq] == 0):
+            if prereq not in [func[0] for func in global_vars.write_queue] and not func_call_tracker[prereq]:
                 global_vars.write_queue.append([prereq, []])                
 
-        func = getattr(ngdl_write_object, func_name)
-        func(gdl_file, *args)
+        if not func_call_tracker[func_name]:
+            func = getattr(ngdl_write_object, func_name)
+            func(gdl_file, *args)
+            func_call_tracker[func_name] = True
         
 
 def insert_conditions(conditions):
@@ -145,7 +150,7 @@ def players(gdl_file):
         next_player_num = player_num + 1
         if next_player_num == len(player_list):
             next_player_num = 0
-        gdl_file.write("(<= next (control " + player_list[player_num].name + ")\n" +
+        gdl_file.write("(<= (next (control " + player_list[player_num].name + "))\n" +
                        "\t(true (control " + player_list[next_player_num].name + ")))\n")
     gdl_file.write("\n")
         
@@ -180,9 +185,9 @@ def place_occupant(gdl_file):
     (does ?player (place ?occupant ?col ?row)))""")
 
 def drop_occupant(gdl_file):
-    gdl_file.write("""(<= (next cell ?col ?row ?player ?occupant)
+    gdl_file.write("""(<= (next (cell ?col ?row ?player ?occupant))
     (does ?player (drop ?occupant ?col))
-    (lowest_open_cell ?col ?row)\n\n""")
+    (lowest_open_cell ?col ?row))\n\n""")
         
 
 ##############################################################
@@ -201,11 +206,13 @@ def noop(gdl_file):
 
 def place_occupant_conditions(gdl_file, conditions):
     gdl_file.write("(<= (legal ?player (place ?occupant ?col ?row))\n " +
-                   "\t(true (control ?player)))\n" + 
+                   "\t(make_true ?occupant)\n" +
+                   "\t(true (control ?player))\n" + 
                    insert_conditions(conditions) + ")\n\n")
 
 def drop_occupant_conditions(gdl_file, conditions):
     gdl_file.write("(<= (legal ?player (drop ?occupant ?col))\n" +
+                   "\t(make_true ?occupant)\n" +
                    "\t(true (control ?player))\n" +
                    insert_conditions(conditions) + ")\n\n")
 
@@ -269,8 +276,11 @@ def lowest_open_cell(gdl_file):
     (not (true (cell ?col ?row1 ?any none))))\n\n""")
 
 def distinct_cells(gdl_file):
-    gdl_file.write("(<= (distinct_cells ?col1 ?row1 ?col2 ?row2) (distinct ?col1 ?col2))\n")
-    gdl_file.write("(<= (distinct_cells ?col1 ?row1 ?col2 ?row2) (distinct ?row1 ?row2))\n\n")
+    gdl_file.write("""(<= (distinct_cells ?col1 ?row1 ?col2 ?row2)
+    (true (cell ?col1 ?row1 ?any ?any2))
+    (true (cell ?col2 ?row2 ?any ?any2))
+    (or (distinct ?col1 ?col2)
+        (distinct ?row1 ?row2)))\n\n""")
 
 # Cardinal Directions
 #def north(gdl_file):
@@ -325,6 +335,13 @@ def board_part_open(gdl_file):
     (make_true ?row)
     (true (cell ?any ?any2 ?player none)))\n\n""")
 
+def board_part_full(gdl_file):
+    gdl_file.write("""(<= (full ?col ?row ?part)
+    (make_true ?col)
+    (make_true ?row)
+    (make_true ?part)
+    (not (open ?col ?row ?part)))\n\n""")
+
 def board_part_empty(gdl_file):
     board = global_vars.game.board
     gdl_file.write("""(<= (empty ?col ?row column)
@@ -352,10 +369,7 @@ def board_part_empty(gdl_file):
 # This is basically a dummy function that will always
 # return true
 def make_true(gdl_file):
-    gdl_file.write("""(<= (make_true ?x)
-    (or
-        (distinct ?x 0)
-        (not (distinct ?x 0))))""")
+    gdl_file.write("(make_true ?x)\n\n")
 
 
 
@@ -371,90 +385,94 @@ def x_in_a_row(gdl_file, x, player="?player", occupant="?piece"):
 
     if player == "?player":
         if occupant == "?piece":
-            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player ?piece)\n")
+            gdl_file.write("\t(make_true ?piece)")
             write_var_succ(gdl_file, x)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) +
-                               " ?row ?player ?occupant" + str(i) + "))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) +
+                               " ?row ?player ?occupant" + str(i) + "))")
             gdl_file.write(")\n\n")
                 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player ?piece)\n")
+            gdl_file.write("\t(make_true ?piece)")
             write_var_succ(gdl_file, x, 0, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col ?row" + str(i) +
-                               " ?player ?occupant" + str(i) + "))\n")
+                gdl_file.write("\n\t(true (cell ?col ?row" + str(i) +
+                               " ?player ?occupant" + str(i) + "))")
             gdl_file.write(")\n\n")
                 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player ?piece)\n")
+            gdl_file.write("\t(make_true ?piece)")
             write_var_succ(gdl_file, x, 1, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) + " ?row" + str(i) +
-                               " ?player ?occupant" + str(i) + "))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) + " ?row" + str(i) +
+                               " ?player ?occupant" + str(i) + "))")
             gdl_file.write(")\n\n")
 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player ?piece)\n")
+            gdl_file.write("\t(make_true ?piece)")
             write_var_succ(gdl_file, x, 1, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) + " ?row" + str((x+1)-i) +
-                               " ?player ?occupant" + str(i) + "))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) + " ?row" + str((x+1)-i) +
+                               " ?player ?occupant" + str(i) + "))")
             gdl_file.write(")\n\n")
             
         elif occupant == "same":
-            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player ?occupant)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player ?occupant)")
             write_var_succ(gdl_file, x)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) +
-                               " ?row ?player ?occupant))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) +
+                               " ?row ?player ?occupant))")
             gdl_file.write(")\n\n")
                 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player ?occupant)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player ?occupant)")
             write_var_succ(gdl_file, x, 0, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col ?row" + str(i) +
-                               " ?player ?occupant))\n")
+                gdl_file.write("\n\t(true (cell ?col ?row" + str(i) +
+                               " ?player ?occupant))")
             gdl_file.write(")\n\n")
                 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player ?occupant)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player ?occupant)")
             write_var_succ(gdl_file, x, 1, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) + " ?row" + str(i) +
-                               " ?player ?occupant))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) + " ?row" + str(i) +
+                               " ?player ?occupant))")
             gdl_file.write(")\n\n")
 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player ?occupant)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player ?occupant)")
             write_var_succ(gdl_file, x, 1, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) + " ?row" + str((x+1)-i) +
-                               " ?player ?occupant))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) + " ?row" + str((x+1)-i) +
+                               " ?player ?occupant))")
             gdl_file.write(")\n\n")
 
         else:
-            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player)")
             write_var_succ(gdl_file, x)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) +
-                               " ?row ?player " + occupant + "))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) +
+                               " ?row ?player " + occupant + "))")
             gdl_file.write(")\n\n")
                 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player)")
             write_var_succ(gdl_file, x, 0, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col ?row" + str(i) +
-                               " ?player " + occupant +"))\n")
+                gdl_file.write("\n\t(true (cell ?col ?row" + str(i) +
+                               " ?player " + occupant +"))")
             gdl_file.write(")\n\n")
                 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player)")
             write_var_succ(gdl_file, x, 1, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) + " ?row" + str(i) +
-                               " ?player " + occupant + "))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) + " ?row" + str(i) +
+                               " ?player " + occupant + "))")
             gdl_file.write(")\n\n")
 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row ?player)")
             write_var_succ(gdl_file, x, 1, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) + " ?row" + str((x+1)-i) +
-                               " ?player " + occupant + "))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) + " ?row" + str((x+1)-i) +
+                               " ?player " + occupant + "))")
             gdl_file.write(")\n\n")
 
     # This would mean that all sets of x squares in-a-row would satisfy the conditions
@@ -463,166 +481,166 @@ def x_in_a_row(gdl_file, x, player="?player", occupant="?piece"):
             print "Error: Not valid input"
 
         elif occupant == "same":
-            gdl_file.write("(<= (" + str(x) + "_in_a_row ?occupant)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row ?occupant)")
             write_var_succ(gdl_file, x)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) +
-                               " ?row ?player" + str(i) + "?occupant))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) +
+                               " ?row ?player" + str(i) + "?occupant))")
             gdl_file.write(")\n\n")
                 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row ?occupant)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row ?occupant)")
             write_var_succ(gdl_file, x, 0, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col ?row" + str(i) +
-                               " ?player" + str(i) + "?occupant))\n")
+                gdl_file.write("\n\t(true (cell ?col ?row" + str(i) +
+                               " ?player" + str(i) + "?occupant))")
             gdl_file.write(")\n\n")
                 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row ?occupant)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row ?occupant)")
             write_var_succ(gdl_file, x, 1, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) + " ?row" + str(i) +
-                               " ?player" + str(i) + "?occupant))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) + " ?row" + str(i) +
+                               " ?player" + str(i) + "?occupant))")
             gdl_file.write(")\n\n")
 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row ?occupant)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row ?occupant)")
             write_var_succ(gdl_file, x, 1, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) + " ?row" + str((x+1)-i) +
-                               " ?player" + str(i) + "?occupant))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) + " ?row" + str((x+1)-i) +
+                               " ?player" + str(i) + "?occupant))")
             gdl_file.write(")\n\n")
 
         else:
-            gdl_file.write("(<= (" + str(x) + "_in_a_row)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row)")
             write_var_succ(gdl_file, x)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) +
-                               " ?row ?player" + str(i) + " " + occupant + "))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) +
+                               " ?row ?player" + str(i) + " " + occupant + "))")
             gdl_file.write(")\n\n")
                 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row)")
             write_var_succ(gdl_file, x, 0, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col ?row" + str(i) +
-                               " ?player" + str(i) + " " + occupant +"))\n")
+                gdl_file.write("\n\t(true (cell ?col ?row" + str(i) +
+                               " ?player" + str(i) + " " + occupant +"))")
             gdl_file.write(")\n\n")
                 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row)")
             write_var_succ(gdl_file, x, 1, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) + " ?row" + str(i) +
-                               " ?player" + str(i) + " " + occupant + "))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) + " ?row" + str(i) +
+                               " ?player" + str(i) + " " + occupant + "))")
             gdl_file.write(")\n\n")
 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row)")
             write_var_succ(gdl_file, x, 1, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) + " ?row" + str((x+1)-i) +
-                               " ?player" + str(i) + " " + occupant + "))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) + " ?row" + str((x+1)-i) +
+                               " ?player" + str(i) + " " + occupant + "))")
             gdl_file.write(")\n\n")
 
     else:
         if occupant == "?piece":
-            gdl_file.write("(<= (" + str(x) + "_in_a_row)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row)")
             write_var_succ(gdl_file, x)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) + "?row " +
-                               player + " ?occupant" + str(i) + "))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) + "?row " +
+                               player + " ?occupant" + str(i) + "))")
             gdl_file.write(")\n\n")
                 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row)")
             write_var_succ(gdl_file, x, 0, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col ?row" + str(i) +
-                               player + " ?occupant" + str(i) + "))\n")
+                gdl_file.write("\n\t(true (cell ?col ?row" + str(i) +
+                               player + " ?occupant" + str(i) + "))")
             gdl_file.write(")\n\n")
                 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row)")
             write_var_succ(gdl_file, x, 1, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) + " ?row" + str(i) +
-                               player + " ?occupant" + str(i) + "))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) + " ?row" + str(i) +
+                               player + " ?occupant" + str(i) + "))")
             gdl_file.write(")\n\n")
 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row)")
             write_var_succ(gdl_file, x, 1, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) + " ?row" + str((x+1)-i) +
+                gdl_file.write("\n\t(true (cell ?col" + str(i) + " ?row" + str((x+1)-i) +
                                 player + " ?occupant" + str(i) + "))\n")
             gdl_file.write(")\n\n")
 
         elif occupant == "same":
-            gdl_file.write("(<= (" + str(x) + "_in_a_row ?occupant)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row ?occupant)")
             write_var_succ(gdl_file, x)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) +
-                               " ?row " + player + " ?occupant))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) +
+                               " ?row " + player + " ?occupant))")
             gdl_file.write(")\n\n")
                 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row ?occupant)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row ?occupant)")
             write_var_succ(gdl_file, x, 0, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col ?row" + str(i) +
-                                " " + player + " ?occupant))\n")
+                gdl_file.write("\n\t(true (cell ?col ?row" + str(i) +
+                                " " + player + " ?occupant))")
             gdl_file.write(")\n\n")
                 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row ?occupant)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row ?occupant)")
             write_var_succ(gdl_file, x, 1, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) + " ?row" + str(i) +
-                                " " + player + " ?occupant))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) + " ?row" + str(i) +
+                                " " + player + " ?occupant))")
             gdl_file.write(")\n\n")
 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row ?occupant)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row ?occupant)")
             write_var_succ(gdl_file, x, 1, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?x" + str(i) + " ?row" + str((x+1)-i) +
-                                " " + player + " ?occupant))\n")
+                gdl_file.write("\n\t(true (cell ?x" + str(i) + " ?row" + str((x+1)-i) +
+                                " " + player + " ?occupant))")
             gdl_file.write(")\n\n")
 
         else:
-            gdl_file.write("(<= (" + str(x) + "_in_a_row)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row)")
             write_var_succ(gdl_file, x)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) +
-                               " ?row " + player + " " + occupant + "))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) +
+                               " ?row " + player + " " + occupant + "))")
             gdl_file.write(")\n\n")
                 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row)")
             write_var_succ(gdl_file, x, 0, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col ?row" + str(i) +
-                               " " + player + " " + occupant +"))\n")
+                gdl_file.write("\n\t(true (cell ?col ?row" + str(i) +
+                               " " + player + " " + occupant +"))")
             gdl_file.write(")\n\n")
                 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row)")
             write_var_succ(gdl_file, x, 1, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) + " ?row" + str(i) +
-                               " " + player + " " + occupant + "))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) + " ?row" + str(i) +
+                               " " + player + " " + occupant + "))")
             gdl_file.write(")\n\n")
 
-            gdl_file.write("(<= (" + str(x) + "_in_a_row)\n")
+            gdl_file.write("(<= (" + str(x) + "_in_a_row)")
             write_var_succ(gdl_file, x, 1, 1)
             for i in range(1,x+1):
-                gdl_file.write("\t(true (cell ?col" + str(i) + " ?row" + str((x+1)-i) +
-                               " " + player + " " + occupant + "))\n")
+                gdl_file.write("\n\t(true (cell ?col" + str(i) + " ?row" + str((x+1)-i) +
+                               " " + player + " " + occupant + "))")
             gdl_file.write(")\n\n")
 
 def write_var_succ(gdl_file, ceiling, x=1, y=0):
     if x == 1 and y == 0:
         for i in range(1,ceiling):
-            gdl_file.write("\t(succ ?col" + str(i) +
-                           " ?col" + str(i+1) + ")\n")
+            gdl_file.write("\n\t(succ ?col" + str(i) +
+                           " ?col" + str(i+1) + ")")
     if x == 0 and y == 1:
         for i in range(1,ceiling):
-            gdl_file.write("\t(succ ?row" + str(i) +
-                           " ?row" + str(i+1) + ")\n")
+            gdl_file.write("\n\t(succ ?row" + str(i) +
+                           " ?row" + str(i+1) + ")")
     if x == 1 and y == 1:
         for i in range(1,ceiling):
-            gdl_file.write("\t(succ ?col" + str(i) +
-                           " ?col" + str(i+1) + ")\n")
-            gdl_file.write("\t(succ ?row" + str(i) +
-                           " ?row" + str(i+1) + ")\n")
+            gdl_file.write("\n\t(succ ?col" + str(i) +
+                           " ?col" + str(i+1) + ")")
+            gdl_file.write("\n\t(succ ?row" + str(i) +
+                           " ?row" + str(i+1) + ")")
 
 
 
