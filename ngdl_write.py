@@ -166,11 +166,13 @@ def perpetuate_untouched_cells(gdl_file, available_actions):
             (does ?move_player (move ?occupant ?src_col ?src_row ?dest_col ?dest_row))
             (distinct_cells ?col ?row ?src_col ?src_row)
             (distinct_cells ?col ?row ?dest_col ?dest_row))\n\n""")    
+            global_vars.write_queue.append(["distinct_cells", []])
         if action == "place":
             gdl_file.write("""(<= (next (cell ?col ?row ?cell_player ?occupant))
             (true (cell ?col ?row ?cell_player ?occupant))
             (does ?move_player (place ?occupant ?dest_col ?dest_row))
             (distinct_cells ?col ?row ?dest_col ?dest_row))\n\n""")    
+            global_vars.write_queue.append(["distinct_cells", []])
         if action == "drop":
             gdl_file.write("""(<= (next (cell ?col ?row ?cell_player ?occupant))
             (true (cell ?col ?row ?cell_player ?occupant))
