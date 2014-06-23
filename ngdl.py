@@ -67,6 +67,7 @@ def game_pieces_dialog():
 
         for p in pieces:
             global_vars.game.pieces[p[1]] = ngdl_classes.Piece(p[1])
+            player.pieces.append(p[1])
 
         on_board_response = raw_input("Do any of " + player.name + "'s pieces start on the board?: ")
         on_board_response = on_board_response.lower()
@@ -238,8 +239,8 @@ def translate_tree(nltk_tree):
     return tree
         
 
-cond_dictionary = {"empty": [[["NUM", "?col"], ["NUM", "?row"], ["BOARD_PART"]], "(empty {0} {1} {2})", "board_part_empty", False],
-                   "open": [[["NUM", "?col"], ["NUM", "?row"], ["BOARD_PART"]], "(open {0} {1} {2})", "board_part_open", False],
-                   "full": [[["NUM", "?col"], ["NUM", "?row"], ["BOARD_PART"]], "(full {0} {1} {2})", "board_part_full", False],
+cond_dictionary = {"empty": [[["BOARD_PART"], ["NUM", "?col"], ["NUM", "?row"]], "(empty {0} {1} {2})", "board_part_empty", False],
+                   "open": [[["BOARD_PART"], ["NUM", "?col"], ["NUM", "?row"]], "(open {0} {1} {2})", "board_part_open", False],
+                   "full": [[["BOARD_PART"], ["NUM", "?col"], ["NUM", "?row"]], "(full {0} {1} {2})", "board_part_full", False],
                    "in-a-row": [[["NUM"], ["PLAYER", "?player"], ["PIECE", "?piece"]], "({0}_in_a_row {1} {2})", "x_in_a_row", True]
                    }

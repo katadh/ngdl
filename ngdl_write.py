@@ -29,10 +29,9 @@ func_prereqs = {"board":[],
                 "adjacent_cells":["adjacent_cols", "adjacent_rows"],
                 "adjacent_cols":[],
                 "adjacent_rows":[],
-                "board_part_open":["make_true"],
-                "board_part_full":["board_part_open", "make_true"],
-                "board_part_empty":["make_true"],
-                "make_true":[],
+                "board_part_open":[],
+                "board_part_full":["board_part_open"],
+                "board_part_empty":[],
                 "x_in_a_row":[]}
 
 # We want to keep track of which definition functions we've
@@ -128,13 +127,33 @@ def board(gdl_file):
         gdl_file.write("(is_row " + str(row) + ")\n")
     gdl_file.write("\n")
 
+    gdl_file.write("""(<= (base (cell ?col ?row ?player ?occupant))
+    (is_column ?col)
+    (is_row ?row)
+    (role ?player)
+    (owns ?player ?occupant))\n\n""")
+
+    gdl_file.write("""(<= (base (cell ?col ?row none none))
+    (is_column ?col)
+    (is_row ?row))\n\n""")
+
+    gdl_file.write("""(board_part row)
+(board_part column)
+(board_part square)
+(board_part board)\n\n""")
+
 # Initialize players
 def players(gdl_file):
     player_list = global_vars.game.players
     for player in player_list:
         gdl_file.write("(role " + player.name + ")\n")
-
     gdl_file.write("\n")
+
+    for player in player_list:
+        gdl_file.write("(base (control " + player.name + "))\n")
+    gdl_file.write("\n")
+
+    gdl_file.write("(init (control " + player_list[0].name + "))\n\n")
 
     # The embedded loops are for if there is more than 2 players
     # Currently does not handle teams
@@ -153,7 +172,11 @@ def players(gdl_file):
         gdl_file.write("(<= (next (control " + player_list[player_num].name + "))\n" +
                        "\t(true (control " + player_list[next_player_num].name + ")))\n")
     gdl_file.write("\n")
-        
+
+    for player in player_list:
+        for piece in player.pieces:
+            gdl_file.write("(owns " + player.name + " " + piece + ")\n")
+    gdl_file.write("\n")
         
 
 # This a function that says that cells not involved in
@@ -205,18 +228,29 @@ def noop(gdl_file):
     gdl_file.write("""(<= (legal ?player noop)
     (role ?player)
     (not (true (control ?player))))\n\n""")
+    gdl_file.write("""(<= (input ?player noop)
+    (role ?player))\n\n""")
 
 def place_occupant_conditions(gdl_file, conditions):
     gdl_file.write("(<= (legal ?player (place ?occupant ?col ?row))\n " +
-                   "\t(make_true ?occupant)\n" +
+                   "\t(owns ?player ?occupant)\n" + 
                    "\t(true (control ?player))\n" + 
                    insert_conditions(conditions) + ")\n\n")
+    gdl_file.write("""(<= (input ?player (place ?occupant ?col ?row))
+    (role ?player)
+    (is_column ?col)
+    (is_row ?row)
+    (owns ?player ?occupant))\n\n""")
 
 def drop_occupant_conditions(gdl_file, conditions):
     gdl_file.write("(<= (legal ?player (drop ?occupant ?col))\n" +
-                   "\t(make_true ?occupant)\n" +
+                   "\t(owns ?player ?occupant)\n" +
                    "\t(true (control ?player))\n" +
                    insert_conditions(conditions) + ")\n\n")
+    gdl_file.write("""(<= (input ?player (drop ?occupant ?col))
+    (role ?player)
+    (is_column ?col)
+    (owns ?player ?occupant))""")
 
 ############################
 # Goal and Terminal States #
@@ -324,25 +358,25 @@ def adjacent_rows(gdl_file):
     (or (next_row ?row1 ?row2) (next_row ?row2 ?row1)))\n\n""")
 
 def board_part_open(gdl_file):
-    gdl_file.write("""(<= (open ?col ?row column)
-    (make_true ?row)
+    gdl_file.write("""(<= (open column ?col ?row)
+    (is_row ?row)
     (true (cell ?col ?any ?player none)))\n\n""")
-    gdl_file.write("""(<= (open ?col ?row row)
-    (make_true ?col)
+    gdl_file.write("""(<= (open row ?col ?row)
+    (is_column ?col)
     (true (cell ?any ?row ?player none)))\n\n""")
-    gdl_file.write("""(<= (open ?col ?row square)
+    gdl_file.write("""(<= (open square ?col ?row)
     (true (cell ?col ?row ?player none)))\n\n""")
-    gdl_file.write("""(<= (open ?col ?row board)
-    (make_true ?col)
-    (make_true ?row)
+    gdl_file.write("""(<= (open board ?col ?row)
+    (is_column ?col)
+    (is_row ?row)
     (true (cell ?any ?any2 ?player none)))\n\n""")
 
 def board_part_full(gdl_file):
-    gdl_file.write("""(<= (full ?col ?row ?part)
-    (make_true ?col)
-    (make_true ?row)
-    (make_true ?part)
-    (not (open ?col ?row ?part)))\n\n""")
+    gdl_file.write("""(<= (full ?part ?col ?row)
+    (is_column ?col)
+    (is_row ?row)
+    (board_part ?part)
+    (not (open ?part ?col ?row)))\n\n""")
 
 def board_part_empty(gdl_file):
     board = global_vars.game.board
@@ -368,13 +402,6 @@ def board_part_empty(gdl_file):
         gdl_file.write("\n\t(empty " + col + " column)")
     gdl_file.write(")\n\n")
 
-# This is basically a dummy function that will always
-# return true
-def make_true(gdl_file):
-    gdl_file.write("(make_true ?x)\n\n")
-
-
-
 # This function is for creating code that tests if x
 # number of cells in a row meet a certain condition.
 # For now these conditions are either that the cells are
@@ -388,7 +415,7 @@ def x_in_a_row(gdl_file, x, player="?player", occupant="?piece"):
     if player == "?player":
         if occupant == "?piece":
             gdl_file.write("(<= (" + str(x) + "_in_a_row ?player ?piece)\n")
-            gdl_file.write("\t(make_true ?piece)")
+            gdl_file.write("\t(owns ?player ?piece)")
             write_var_succ(gdl_file, x)
             for i in range(1,x+1):
                 gdl_file.write("\n\t(true (cell ?col" + str(i) +
@@ -396,7 +423,7 @@ def x_in_a_row(gdl_file, x, player="?player", occupant="?piece"):
             gdl_file.write(")\n\n")
                 
             gdl_file.write("(<= (" + str(x) + "_in_a_row ?player ?piece)\n")
-            gdl_file.write("\t(make_true ?piece)")
+            gdl_file.write("\t(owns ?player ?piece)")
             write_var_succ(gdl_file, x, 0, 1)
             for i in range(1,x+1):
                 gdl_file.write("\n\t(true (cell ?col ?row" + str(i) +
@@ -404,7 +431,7 @@ def x_in_a_row(gdl_file, x, player="?player", occupant="?piece"):
             gdl_file.write(")\n\n")
                 
             gdl_file.write("(<= (" + str(x) + "_in_a_row ?player ?piece)\n")
-            gdl_file.write("\t(make_true ?piece)")
+            gdl_file.write("\t(owns ?player ?piece)")
             write_var_succ(gdl_file, x, 1, 1)
             for i in range(1,x+1):
                 gdl_file.write("\n\t(true (cell ?col" + str(i) + " ?row" + str(i) +
@@ -412,7 +439,7 @@ def x_in_a_row(gdl_file, x, player="?player", occupant="?piece"):
             gdl_file.write(")\n\n")
 
             gdl_file.write("(<= (" + str(x) + "_in_a_row ?player ?piece)\n")
-            gdl_file.write("\t(make_true ?piece)")
+            gdl_file.write("\t(owns ?player ?piece)")
             write_var_succ(gdl_file, x, 1, 1)
             for i in range(1,x+1):
                 gdl_file.write("\n\t(true (cell ?col" + str(i) + " ?row" + str((x+1)-i) +
